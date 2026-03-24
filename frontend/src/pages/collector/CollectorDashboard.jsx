@@ -2,9 +2,13 @@ import { MapPinned, QrCode, AlarmClock, Route, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import { useNavigate } from "react-router-dom";
 import { trucks, bins } from "../../data/mock.js";
+import { savePickupEvent } from "../../utils/wasteStore";
 
 export default function CollectorDashboard() {
+  const navigate = useNavigate();
+
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanResult, setScanResult] = useState("");
   const [cleanedResult, setCleanedResult] = useState("");
@@ -25,10 +29,7 @@ export default function CollectorDashboard() {
 
         await html5QrCode.start(
           { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 220, height: 220 },
-          },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
           async (decodedText) => {
             handleScan(decodedText);
             await stopScanner();
@@ -69,16 +70,10 @@ export default function CollectorDashboard() {
 
     const raw = decodedText.trim();
 
-    // Case 1: direct BIN code like BIN-1001
-    if (/^BIN-\d+$/i.test(raw)) {
-      return raw.toUpperCase();
-    }
+    if (/^BIN-\d+$/i.test(raw)) return raw.toUpperCase();
 
-    // Case 2: QR contains URL, query string, or path
     try {
       const url = new URL(raw);
-
-      // Check query params first, e.g. ?id=BIN-1001 or ?bin=BIN-1001
       const queryId =
         url.searchParams.get("id") ||
         url.searchParams.get("bin") ||
@@ -88,24 +83,17 @@ export default function CollectorDashboard() {
         return queryId.trim().toUpperCase();
       }
 
-      // Check last path segment, e.g. /BIN-1001
       const parts = url.pathname.split("/").filter(Boolean);
       const lastPart = parts[parts.length - 1];
 
       if (lastPart && /^BIN-\d+$/i.test(lastPart.trim())) {
         return lastPart.trim().toUpperCase();
       }
-    } catch {
-      // Not a valid URL, continue fallback
-    }
+    } catch {}
 
-    // Case 3: find BIN-xxxx anywhere in text
     const match = raw.match(/BIN-\d+/i);
-    if (match) {
-      return match[0].toUpperCase();
-    }
+    if (match) return match[0].toUpperCase();
 
-    // Nothing usable found
     return raw;
   };
 
@@ -119,18 +107,25 @@ export default function CollectorDashboard() {
       (b) => b.id.toUpperCase() === normalizedId.toUpperCase()
     );
 
-    if (foundBin) {
-      setBinData(foundBin);
-    } else {
-      setBinData(null);
-    }
-
+    setBinData(foundBin || null);
     setPickupConfirmed(false);
   };
 
   const handleConfirmPickup = () => {
     if (!binData) return;
+
+    const chosenTruck = trucks.find((t) => t.plate === binData.assignedTruck);
+    savePickupEvent({
+      bin: binData,
+      truck: chosenTruck?.plate || binData.assignedTruck,
+      collector: "Ravi Kumar",
+    });
+
     setPickupConfirmed(true);
+
+    setTimeout(() => {
+      navigate(`/passport/${binData.id}`);
+    }, 800);
   };
 
   return (
@@ -186,13 +181,8 @@ export default function CollectorDashboard() {
               <p className="text-sm font-semibold text-red-700">
                 Bin not found
               </p>
-              <p className="mt-1 text-sm text-slate-700">
-                This QR was scanned successfully, but it does not match any bin
-                in your system.
-              </p>
               <p className="mt-2 text-sm text-slate-700">
-                Use QR values like <b>BIN-1001</b>, or URLs that contain a bin
-                ID such as <b>.../BIN-1001</b> or <b>?id=BIN-1001</b>.
+                Use QR values like <b>BIN-1001</b>.
               </p>
             </div>
           )}
@@ -258,7 +248,7 @@ export default function CollectorDashboard() {
 
                 {pickupConfirmed && (
                   <span className="rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
-                    Pickup confirmed successfully
+                    Pickup saved and passport updated
                   </span>
                 )}
               </div>
