@@ -2,18 +2,21 @@ import { MapPinned, QrCode, AlarmClock, Route, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { trucks } from "../../data/mock.js";
+import { trucks, bins } from "../../data/mock.js";
 
 export default function CollectorDashboard() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanResult, setScanResult] = useState("");
-  const qrRef = useRef(null);
+  const [cleanedResult, setCleanedResult] = useState("");
+  const [binData, setBinData] = useState(null);
+  const [pickupConfirmed, setPickupConfirmed] = useState(false);
+
   const html5QrCodeRef = useRef(null);
 
   useEffect(() => {
     if (!scannerOpen) return;
 
-    const scannerId = "reader";
+    const scannerId = "collector-qr-reader";
 
     const startScanner = async () => {
       try {
@@ -26,13 +29,12 @@ export default function CollectorDashboard() {
             fps: 10,
             qrbox: { width: 220, height: 220 },
           },
-          (decodedText) => {
-            setScanResult(decodedText);
-            stopScanner();
+          async (decodedText) => {
+            handleScan(decodedText);
+            await stopScanner();
             setScannerOpen(false);
           },
-          (errorMessage) => {
-          }
+          () => {}
         );
       } catch (error) {
         console.error("QR scanner error:", error);
@@ -51,7 +53,7 @@ export default function CollectorDashboard() {
     try {
       if (html5QrCodeRef.current) {
         const state = html5QrCodeRef.current.getState();
-        if (state === 2 || state === 1) {
+        if (state === 1 || state === 2) {
           await html5QrCodeRef.current.stop();
         }
         await html5QrCodeRef.current.clear();
@@ -62,6 +64,75 @@ export default function CollectorDashboard() {
     }
   };
 
+  const extractBinId = (decodedText) => {
+    if (!decodedText) return "";
+
+    const raw = decodedText.trim();
+
+    // Case 1: direct BIN code like BIN-1001
+    if (/^BIN-\d+$/i.test(raw)) {
+      return raw.toUpperCase();
+    }
+
+    // Case 2: QR contains URL, query string, or path
+    try {
+      const url = new URL(raw);
+
+      // Check query params first, e.g. ?id=BIN-1001 or ?bin=BIN-1001
+      const queryId =
+        url.searchParams.get("id") ||
+        url.searchParams.get("bin") ||
+        url.searchParams.get("binId");
+
+      if (queryId && /^BIN-\d+$/i.test(queryId.trim())) {
+        return queryId.trim().toUpperCase();
+      }
+
+      // Check last path segment, e.g. /BIN-1001
+      const parts = url.pathname.split("/").filter(Boolean);
+      const lastPart = parts[parts.length - 1];
+
+      if (lastPart && /^BIN-\d+$/i.test(lastPart.trim())) {
+        return lastPart.trim().toUpperCase();
+      }
+    } catch {
+      // Not a valid URL, continue fallback
+    }
+
+    // Case 3: find BIN-xxxx anywhere in text
+    const match = raw.match(/BIN-\d+/i);
+    if (match) {
+      return match[0].toUpperCase();
+    }
+
+    // Nothing usable found
+    return raw;
+  };
+
+  const handleScan = (decodedText) => {
+    setScanResult(decodedText);
+
+    const normalizedId = extractBinId(decodedText);
+    setCleanedResult(normalizedId);
+
+    const foundBin = bins.find(
+      (b) => b.id.toUpperCase() === normalizedId.toUpperCase()
+    );
+
+    if (foundBin) {
+      setBinData(foundBin);
+    } else {
+      setBinData(null);
+    }
+
+    setPickupConfirmed(false);
+  };
+
+  const handleConfirmPickup = () => {
+    if (!binData) return;
+    setPickupConfirmed(true);
+  };
+
   return (
     <div className="min-h-screen bg-[#f5f7fb] px-6 py-8 text-slate-900">
       <div className="w-full space-y-6">
@@ -69,6 +140,7 @@ export default function CollectorDashboard() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
             Collector Operations
           </p>
+
           <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
@@ -91,8 +163,105 @@ export default function CollectorDashboard() {
 
           {scanResult && (
             <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4">
-              <p className="text-sm font-semibold text-green-700">Scanned Result</p>
-              <p className="mt-1 text-sm text-slate-700">{scanResult}</p>
+              <p className="text-sm font-semibold text-green-700">
+                Scanned Result
+              </p>
+              <p className="mt-1 break-all text-sm text-slate-700">
+                {scanResult}
+              </p>
+
+              {cleanedResult && cleanedResult !== scanResult && (
+                <>
+                  <p className="mt-3 text-sm font-semibold text-blue-700">
+                    Detected Bin ID
+                  </p>
+                  <p className="mt-1 text-sm text-slate-700">{cleanedResult}</p>
+                </>
+              )}
+            </div>
+          )}
+
+          {scanResult && !binData && (
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-700">
+                Bin not found
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                This QR was scanned successfully, but it does not match any bin
+                in your system.
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                Use QR values like <b>BIN-1001</b>, or URLs that contain a bin
+                ID such as <b>.../BIN-1001</b> or <b>?id=BIN-1001</b>.
+              </p>
+            </div>
+          )}
+
+          {binData && (
+            <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+              <p className="text-sm font-semibold text-blue-700">Bin Details</p>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-blue-100 bg-white p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Bin ID
+                  </p>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {binData.id}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-blue-100 bg-white p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Area
+                  </p>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {binData.area}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-blue-100 bg-white p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Waste Type
+                  </p>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {binData.wasteType}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-blue-100 bg-white p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Last Pickup
+                  </p>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {binData.lastPickup}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-blue-100 bg-white p-3 md:col-span-2">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Assigned Truck
+                  </p>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {binData.assignedTruck}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleConfirmPickup}
+                  className="rounded-xl bg-[#16a34a] px-5 py-3 font-semibold text-white shadow-sm hover:bg-[#15803d]"
+                >
+                  Confirm Pickup
+                </button>
+
+                {pickupConfirmed && (
+                  <span className="rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
+                    Pickup confirmed successfully
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -173,7 +342,9 @@ export default function CollectorDashboard() {
         </div>
 
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-3 text-xl font-bold text-slate-900">Current Route</h2>
+          <h2 className="mb-3 text-xl font-bold text-slate-900">
+            Current Route
+          </h2>
           <div className="flex items-center gap-2 text-slate-700">
             <Route size={18} className="text-[#1d4ed8]" />
             Ward 1 → Plant South Recycling Park → ETA 32 min
@@ -198,8 +369,7 @@ export default function CollectorDashboard() {
             </div>
 
             <div
-              id="reader"
-              ref={qrRef}
+              id="collector-qr-reader"
               className="overflow-hidden rounded-2xl border border-slate-200"
             />
 

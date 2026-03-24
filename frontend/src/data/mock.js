@@ -1,32 +1,99 @@
 export const trucks = [
-  { id: "T-1", plate: "KA-01-TR-1234", status: "active", lat: 12.975, lng: 77.595, deviation: 0 },
-  { id: "T-2", plate: "KA-02-TR-8888", status: "alert", lat: 12.99, lng: 77.62, deviation: 18 }
+  {
+    id: 1,
+    plate: "KA-01-TR-1234",
+    status: "active",
+    deviation: 0,
+    lat: 12.971,
+    lng: 77.620,
+  },
+  {
+    id: 2,
+    plate: "KA-02-TR-8888",
+    status: "alert",
+    deviation: 18,
+    lat: 12.959,
+    lng: 77.630,
+  },
+  {
+    id: 3,
+    plate: "KA-03-TR-4567",
+    status: "active",
+    deviation: 3,
+    lat: 12.945,
+    lng: 77.615,
+  },
+];
+
+export const bins = [
+  {
+    id: "BIN-1001",
+    area: "Ward 1",
+    wasteType: "Mixed Waste",
+    lastPickup: "Today 8:30 AM",
+    assignedTruck: "KA-01-TR-1234",
+  },
+  {
+    id: "BIN-1002",
+    area: "Ward 2",
+    wasteType: "Dry Waste",
+    lastPickup: "Today 9:10 AM",
+    assignedTruck: "KA-02-TR-8888",
+  },
 ];
 
 export const alerts = [
-  { id: 1, severity: "critical", title: "Leakage Event", detail: "Loss of 8.5 kg vs plant weight", batch: "WB-AX93PZ" },
-  { id: 2, severity: "high", title: "Truck Entered Red Zone", detail: "T-2 paused 24 min near riverbank", batch: "WB-AX93PZ" },
-  { id: 3, severity: "medium", title: "Isolation Score Spike", detail: "Contractor MetroWaste risk +12", batch: "-" }
+  {
+    id: 1,
+    type: "Weight Mismatch",
+    message: "Truck KA-01-TR-1234 reported 50kg but plant received 30kg",
+    severity: "high",
+    time: "10:45 AM",
+  },
+  {
+    id: 2,
+    type: "Route Deviation",
+    message: "Truck KA-02-TR-8888 deviated from assigned route",
+    severity: "medium",
+    time: "11:20 AM",
+  },
 ];
 
 export const passport = {
-  id: "WB-AX93PZ",
-  source: "BIN-001",
-  ward: "Ward 1",
-  collector: "Collector Joy",
+  id: "BIN-1001",
+  status: "Collected",
+  risk: "Low",
+
+  source: "Ward 1",
+  collector: "Ravi Kumar",
   truck: "KA-01-TR-1234",
-  citizen: "Aditi Citizen",
-  predicted: "Mixed",
-  segregationQuality: "Medium",
-  pickupWeight: 52,
-  plantWeight: 44,
-  status: "Flagged",
-  outcome: "Pending",
-  risk: "High",
-  ai: { category: "Mixed", contaminationRisk: "Medium", recommendation: "Improve dry segregation" },
+
+  pickupWeight: 50,
+  plantWeight: 48,
+
+  ai: {
+    category: "Mixed Waste",
+    recommendation: "Segregate at source",
+  },
+
   chain: [
-    { label: "Pickup", hash: "a12f...", actor: "Collector Joy", time: "08:12" },
-    { label: "GPS", hash: "b8cc...", actor: "Collector Joy", time: "08:30" },
-    { label: "Plant Weight", hash: "c33e...", actor: "Plant Ops", time: "09:15" }
-  ]
+    {
+      label: "Citizen Upload",
+      actor: "Citizen",
+      time: "08:30 AM",
+      hash: "A1B2C3",
+    },
+    {
+      label: "Collector Pickup",
+      actor: "Collector",
+      time: "09:15 AM",
+      hash: "D4E5F6",
+    },
+    {
+      label: "Plant Verification",
+      actor: "Plant",
+      time: "10:10 AM",
+      hash: "G7H8I9",
+    },
+  ],
 };
