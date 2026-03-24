@@ -32,6 +32,9 @@ export const bins = [
     wasteType: "Mixed Waste",
     lastPickup: "Today 8:30 AM",
     assignedTruck: "KA-01-TR-1234",
+    lat: 12.971,
+    lng: 77.620,
+    citizenName: "Resident - Ward 1",
   },
   {
     id: "BIN-1002",
@@ -39,70 +42,43 @@ export const bins = [
     wasteType: "Dry Waste",
     lastPickup: "Today 9:10 AM",
     assignedTruck: "KA-02-TR-8888",
+    lat: 12.959,
+    lng: 77.630,
+    citizenName: "Resident - Ward 2",
   },
   {
     id: "BIN-1003",
     area: "Ward 3",
     wasteType: "Wet Waste",
-    lastPickup: "Today 10:00 AM",
+    lastPickup: "Yesterday 6:45 PM",
     assignedTruck: "KA-03-TR-4567",
-  }
+    lat: 12.945,
+    lng: 77.615,
+    citizenName: "Resident - Ward 3",
+  },
 ];
 
-export const alerts = [
-  {
-    id: 1,
-    type: "Weight Mismatch",
-    message: "Truck KA-01-TR-1234 reported 50kg but plant received 30kg",
-    severity: "high",
-    time: "10:45 AM",
-  },
-  {
-    id: 2,
-    type: "Route Deviation",
-    message: "Truck KA-02-TR-8888 deviated from assigned route",
-    severity: "medium",
-    time: "11:20 AM",
-  },
+export const authorizedZones = [
+  { id: "COLLECTION_ZONE_1", name: "Ward 1 Collection Zone", lat: 12.971, lng: 77.620, radiusKm: 1.2 },
+  { id: "COLLECTION_ZONE_2", name: "Ward 2 Collection Zone", lat: 12.959, lng: 77.630, radiusKm: 1.2 },
+  { id: "COLLECTION_ZONE_3", name: "Ward 3 Collection Zone", lat: 12.945, lng: 77.615, radiusKm: 1.2 },
+  { id: "PLANT_ZONE", name: "South Recycling Plant", lat: 12.930, lng: 77.600, radiusKm: 1.5 },
 ];
 
 export const passport = {
   id: "BIN-1001",
-  status: "Collected",
+  status: "Pending",
   risk: "Low",
-
   source: "Ward 1",
-  collector: "Ravi Kumar",
+  collector: "Not assigned",
   truck: "KA-01-TR-1234",
-
-  pickupWeight: 50,
-  plantWeight: 48,
-
+  pickupWeight: 0,
+  plantWeight: null,
   ai: {
     category: "Mixed Waste",
     recommendation: "Segregate at source",
   },
-
-  chain: [
-    {
-      label: "Citizen Upload",
-      actor: "Citizen",
-      time: "08:30 AM",
-      hash: "A1B2C3",
-    },
-    {
-      label: "Collector Pickup",
-      actor: "Collector",
-      time: "09:15 AM",
-      hash: "D4E5F6",
-    },
-    {
-      label: "Plant Verification",
-      actor: "Plant",
-      time: "10:10 AM",
-      hash: "G7H8I9",
-    },
-  ],
+  chain: [],
 };
 
-
+export const alerts = [];

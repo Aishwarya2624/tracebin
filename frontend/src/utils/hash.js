@@ -1,0 +1,11 @@
+export async function sha256(text) {
+  const data = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function buildStepHash(stepData, previousHash = "GENESIS") {
+  const payload = JSON.stringify(stepData) + previousHash;
+  return sha256(payload);
+}
