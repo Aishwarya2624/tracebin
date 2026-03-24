@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { passport as defaultPassport } from "../data/mock.js";
 import { Lock } from "lucide-react";
 import { getLatestEventByBinId } from "../utils/wasteStore";
@@ -41,9 +41,18 @@ export default function WastePassport() {
               </p>
             </div>
 
-            <div className="inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
-              <Lock size={16} />
-              Signed pickup trail
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to={`/audit/${p.id}`}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                Open Audit Trail
+              </Link>
+
+              <div className="inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
+                <Lock size={16} />
+                Signed pickup trail
+              </div>
             </div>
           </div>
         </div>
@@ -92,13 +101,31 @@ export default function WastePassport() {
             <h2 className="mb-4 text-xl font-bold text-slate-900">Details</h2>
 
             <div className="space-y-3 text-sm text-slate-700">
-              <p><span className="font-semibold">Source:</span> {p.source}</p>
-              <p><span className="font-semibold">Collector:</span> {p.collector}</p>
-              <p><span className="font-semibold">Truck:</span> {p.truck}</p>
-              <p><span className="font-semibold">Pickup weight:</span> {p.pickupWeight ?? "-"} kg</p>
-              <p><span className="font-semibold">Plant weight:</span> {p.plantWeight ?? "-"} kg</p>
-              <p><span className="font-semibold">AI category:</span> {p.ai?.category}</p>
-              <p><span className="font-semibold">Recommendation:</span> {p.ai?.recommendation}</p>
+              <p>
+                <span className="font-semibold">Source:</span> {p.source}
+              </p>
+              <p>
+                <span className="font-semibold">Collector:</span> {p.collector}
+              </p>
+              <p>
+                <span className="font-semibold">Truck:</span> {p.truck}
+              </p>
+              <p>
+                <span className="font-semibold">Pickup weight:</span>{" "}
+                {p.pickupWeight ?? "-"} kg
+              </p>
+              <p>
+                <span className="font-semibold">Plant weight:</span>{" "}
+                {p.plantWeight ?? "-"} kg
+              </p>
+              <p>
+                <span className="font-semibold">AI category:</span>{" "}
+                {p.ai?.category}
+              </p>
+              <p>
+                <span className="font-semibold">Recommendation:</span>{" "}
+                {p.ai?.recommendation}
+              </p>
             </div>
           </div>
         </div>

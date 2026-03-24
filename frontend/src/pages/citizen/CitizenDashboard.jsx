@@ -1,203 +1,238 @@
-import { MapPinned, QrCode, AlarmClock, Route, X } from "lucide-react";
-import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
-import { trucks, bins } from "../../data/mock.js";
+import { useState } from "react";
+import { QrCode, MapPin, Camera, FileText, CheckCircle2 } from "lucide-react";
+import { bins } from "../../data/mock.js";
+import { saveComplaint } from "../../utils/wasteStore";
 
-export default function CollectorDashboard() {
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [scanResult, setScanResult] = useState("");
-  const [binData, setBinData] = useState(null);
-  const [pickupDone, setPickupDone] = useState(false);
+export default function CitizenDashboard() {
+  const [binId, setBinId] = useState("");
+  const [selectedBin, setSelectedBin] = useState(null);
+  const [complaintText, setComplaintText] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submittedComplaint, setSubmittedComplaint] = useState(null);
+  const [searched, setSearched] = useState(false);
 
-  const html5QrCodeRef = useRef(null);
+  const handleFindBin = () => {
+    const found = bins.find(
+      (b) => b.id.toUpperCase() === binId.trim().toUpperCase()
+    );
 
-  useEffect(() => {
-    if (!scannerOpen) return;
-
-    const scannerId = "collector-qr-reader";
-
-    const startScanner = async () => {
-      try {
-        const html5QrCode = new Html5Qrcode(scannerId);
-        html5QrCodeRef.current = html5QrCode;
-
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 220, height: 220 },
-          },
-          async (decodedText) => {
-            setScanResult(decodedText);
-
-            // 🔥 FIND BIN
-            const found = bins.find((b) => b.id === decodedText);
-
-            if (found) {
-              setBinData(found);
-            } else {
-              setBinData(null);
-            }
-
-            setPickupDone(false);
-
-            await stopScanner();
-            setScannerOpen(false);
-          },
-          () => {}
-        );
-      } catch (error) {
-        console.error("QR scanner error:", error);
-        alert("Camera access failed");
-      }
-    };
-
-    startScanner();
-
-    return () => {
-      stopScanner();
-    };
-  }, [scannerOpen]);
-
-  const stopScanner = async () => {
-    try {
-      if (html5QrCodeRef.current) {
-        const state = html5QrCodeRef.current.getState();
-        if (state === 1 || state === 2) {
-          await html5QrCodeRef.current.stop();
-        }
-        await html5QrCodeRef.current.clear();
-        html5QrCodeRef.current = null;
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    setSelectedBin(found || null);
+    setSubmitted(false);
+    setSubmittedComplaint(null);
+    setSearched(true);
   };
 
-  const handlePickup = () => {
-    setPickupDone(true);
+  const handleSubmitComplaint = () => {
+    if (!selectedBin || !complaintText.trim()) return;
+
+    const saved = saveComplaint({
+      bin: selectedBin,
+      complaintText: complaintText.trim(),
+    });
+
+    setSubmittedComplaint(saved);
+    setSubmitted(true);
+    setComplaintText("");
   };
 
   return (
-    <div className="space-y-5">
-
-      {/* TRUCKS */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {trucks.map((t) => (
-          <motion.div
-            key={t.id}
-            className="glass rounded-xl border border-white/10 p-4"
-            whileHover={{ y: -2 }}
-          >
-            <div className="flex justify-between">
-              <p className="font-semibold">{t.plate}</p>
-              <span className={`text-xs px-2 py-1 rounded ${
-                t.status === "alert" ? "bg-amber/30" : "bg-neon/20"
-              }`}>
-                {t.status}
-              </span>
-            </div>
-
-            <p className="text-sm text-white/60">Deviation {t.deviation}%</p>
-
-            <div className="mt-2 flex gap-2 text-cyan text-sm">
-              <MapPinned size={16}/>
-              {t.lat.toFixed(3)} | {t.lng.toFixed(3)}
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* QR + RESULT */}
-      <div className="glass p-4 rounded-xl border border-white/10">
-        <div className="flex justify-between mb-3">
-          <h3 className="font-semibold">Pickup flow</h3>
-
-          <button
-            onClick={() => setScannerOpen(true)}
-            className="bg-neon px-4 py-2 rounded font-semibold flex items-center gap-2 text-ink"
-          >
-            <QrCode size={16}/> Scan QR
-          </button>
-        </div>
-
-        {scanResult && (
-          <div className="mb-3 p-3 bg-green-500/10 border border-green-400/30 rounded">
-            <p className="text-green-300 text-sm">Scanned Result</p>
-            <p className="text-white text-sm">{scanResult}</p>
-          </div>
-        )}
-
-        {/* BIN DETAILS */}
-        {binData && (
-          <div className="p-4 bg-blue-500/10 border border-blue-400/30 rounded space-y-2">
-            <p className="text-blue-300 font-semibold">Bin Details</p>
-
-            <p>ID: {binData.id}</p>
-            <p>Area: {binData.area}</p>
-            <p>Waste: {binData.wasteType}</p>
-            <p>Last Pickup: {binData.lastPickup}</p>
-            <p>Truck: {binData.assignedTruck}</p>
-
-            <button
-              onClick={handlePickup}
-              className="mt-2 bg-green-600 px-4 py-2 rounded text-white"
-            >
-              Confirm Pickup
-            </button>
-
-            {pickupDone && (
-              <p className="text-green-400 text-sm mt-2">
-                ✔ Pickup confirmed
-              </p>
-            )}
-          </div>
-        )}
-
-        {!binData && scanResult && (
-          <p className="text-red-400 text-sm">
-            ❌ Invalid QR — use BIN-1001
+    <div className="min-h-screen bg-[#f5f7fb] px-6 py-8 text-slate-900">
+      <div className="w-full space-y-6">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Citizen Services
           </p>
-        )}
-
-        <div className="grid md:grid-cols-3 gap-3 mt-4 text-sm">
-          <div className="glass p-3 rounded">1) Scan QR</div>
-          <div className="glass p-3 rounded">2) Upload proof</div>
-          <div className="glass p-3 rounded text-amber flex gap-2 items-center">
-            <AlarmClock size={16}/> 3) Alerts
-          </div>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">
+            Citizen Transparency Dashboard
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Check bin details, raise complaints, and improve accountability in
+            the waste management process.
+          </p>
         </div>
-      </div>
 
-      {/* ROUTE */}
-      <div className="glass p-4 rounded-xl border border-white/10">
-        <h3 className="mb-2 font-semibold">Current route</h3>
-        <div className="flex gap-2 text-white/70">
-          <Route size={16}/>
-          Ward 1 → Plant → ETA 32 min
-        </div>
-      </div>
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2">
+              <QrCode size={18} className="text-[#1d4ed8]" />
+              <h2 className="text-xl font-bold text-slate-900">
+                Check Bin Information
+              </h2>
+            </div>
 
-      {/* SCANNER MODAL */}
-      {scannerOpen && (
-        <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
-          <div className="glass p-5 rounded-xl w-full max-w-md">
-            <div className="flex justify-between mb-3">
-              <h3>Scan QR</h3>
-              <button onClick={() => setScannerOpen(false)}>
-                <X />
+            <p className="mt-2 text-sm text-slate-600">
+              Enter a bin ID like <b>BIN-1001</b> to view current details.
+            </p>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <input
+                type="text"
+                value={binId}
+                onChange={(e) => setBinId(e.target.value)}
+                placeholder="Enter bin ID e.g. BIN-1001"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400"
+              />
+
+              <button
+                onClick={handleFindBin}
+                className="rounded-xl bg-[#1d4ed8] px-5 py-3 font-semibold text-white hover:bg-[#1e40af]"
+              >
+                Find Bin
               </button>
             </div>
 
-            <div id="collector-qr-reader" className="bg-white rounded"/>
+            {searched && binId && !selectedBin && (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-semibold text-red-700">
+                  Bin not found
+                </p>
+                <p className="mt-1 text-sm text-slate-700">
+                  Please enter a valid bin ID available in the system.
+                </p>
+              </div>
+            )}
 
-            <p className="text-sm text-white/60 mt-3">
-              Point camera to QR
-            </p>
+            {selectedBin && (
+              <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <p className="text-sm font-semibold text-blue-700">
+                  Bin Details
+                </p>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-xl border border-blue-100 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Bin ID
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {selectedBin.id}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-100 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Area
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {selectedBin.area}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-100 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Waste Type
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {selectedBin.wasteType}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-100 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Last Pickup
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {selectedBin.lastPickup}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2">
+              <FileText size={18} className="text-[#1d4ed8]" />
+              <h2 className="text-xl font-bold text-slate-900">
+                Raise Complaint
+              </h2>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-slate-800">
+                  <MapPin size={16} className="text-[#1d4ed8]" />
+                  <p className="font-semibold">Location-linked complaint</p>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">
+                  Report overflowing bins, delayed pickup, or improper handling.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-slate-800">
+                  <Camera size={16} className="text-[#1d4ed8]" />
+                  <p className="font-semibold">Photo upload support</p>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">
+                  Future enhancement: upload waste images for visual evidence.
+                </p>
+              </div>
+
+              <textarea
+                value={complaintText}
+                onChange={(e) => setComplaintText(e.target.value)}
+                placeholder="Write your complaint here..."
+                className="min-h-[120px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400"
+              />
+
+              <button
+                onClick={handleSubmitComplaint}
+                disabled={!selectedBin || !complaintText.trim()}
+                className="w-full rounded-xl bg-[#16a34a] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                Submit Complaint
+              </button>
+
+              {submitted && submittedComplaint && (
+  <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+    <div className="flex items-center gap-2 text-green-700">
+      <CheckCircle2 size={18} />
+      <p className="font-semibold">Complaint submitted</p>
+    </div>
+    <p className="mt-2 text-sm text-slate-700">
+      Your complaint has been registered for bin <b>{submittedComplaint.binId}</b>.
+    </p>
+    <p className="mt-1 text-xs text-slate-500">
+      Complaint ID: {submittedComplaint.id}
+    </p>
+    <p className="mt-1 text-xs text-slate-500">
+      Status: {submittedComplaint.status} • {submittedComplaint.createdLabel}
+    </p>
+  </div>
+)}
+            </div>
           </div>
         </div>
-      )}
+
+        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900">
+            Citizen Workflow
+          </h2>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="font-semibold text-slate-900">1) Identify Bin</p>
+              <p className="mt-2 text-sm text-slate-600">
+                Enter the bin ID to fetch current system details.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="font-semibold text-slate-900">2) Review Status</p>
+              <p className="mt-2 text-sm text-slate-600">
+                Check area, waste type, and latest pickup information.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="font-semibold text-slate-900">3) Raise Complaint</p>
+              <p className="mt-2 text-sm text-slate-600">
+                Submit a complaint that becomes visible to administrators.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

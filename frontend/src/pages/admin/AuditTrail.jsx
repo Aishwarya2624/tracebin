@@ -23,7 +23,9 @@ export default function AuditTrail() {
                 className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex justify-between items-center"
               >
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{e.label}</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {e.label}
+                  </p>
                   <p className="text-xs text-slate-500">
                     Prev hash → {idx === 0 ? "GENESIS" : events[idx - 1].hash}
                   </p>

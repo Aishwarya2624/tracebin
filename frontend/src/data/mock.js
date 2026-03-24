@@ -40,6 +40,13 @@ export const bins = [
     lastPickup: "Today 9:10 AM",
     assignedTruck: "KA-02-TR-8888",
   },
+  {
+    id: "BIN-1003",
+    area: "Ward 3",
+    wasteType: "Wet Waste",
+    lastPickup: "Today 10:00 AM",
+    assignedTruck: "KA-03-TR-4567",
+  }
 ];
 
 export const alerts = [
