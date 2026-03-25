@@ -9,6 +9,7 @@ const links = [
   { to: "/collector", label: "Collector" },
   { to: "/plant", label: "Plant" },
   { to: "/admin", label: "Command" },
+  { to: "/demo", label: "Demo Mode" },
 ];
 
 export default function Layout({ children }) {

@@ -7,6 +7,7 @@ import PlantDashboard from "./pages/plant/PlantDashboard";
 import WastePassport from "./pages/WastePassport";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AuditTrail from "./pages/admin/AuditTrail";
+import DemoMode from "./pages/admin/DemoMode";
 
 export default function App() {
   return (
@@ -17,8 +18,9 @@ export default function App() {
         <Route path="/collector" element={<CollectorDashboard />} />
         <Route path="/plant" element={<PlantDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/passport/:id" element={<WastePassport />} />
         <Route path="/audit/:id" element={<AuditTrail />} />
+        <Route path="/passport/:id" element={<WastePassport />} />
+        <Route path="/demo" element={<DemoMode />} />
       </Routes>
     </Layout>
   );

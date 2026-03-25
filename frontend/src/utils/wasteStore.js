@@ -1,9 +1,168 @@
-import { authorizedZones } from "../data/mock";
 import { buildStepHash } from "./hash";
 
 const EVENT_STORAGE_KEY = "tracebin_events";
 const COMPLAINT_STORAGE_KEY = "tracebin_complaints";
 
+/* --------------------------------
+   DEFAULT DEMO DATA
+-------------------------------- */
+const DEFAULT_EVENTS = [
+  {
+    id: "EVT-DEMO-001",
+    binId: "BIN-101",
+    area: "Ward 12",
+    wasteType: "Mixed Waste",
+    truck: "KA-02-TR-8888",
+    collector: "Collector Arun",
+    status: "Collected",
+    pickupWeight: 58,
+    plantWeight: null,
+    risk: "Low",
+    source: "Ward 12",
+    ai: {
+      category: "Mixed Waste",
+      recommendation: "Segregate at source",
+    },
+    sourceStamp: {
+      binId: "BIN-101",
+      timestamp: new Date().toISOString(),
+      estimatedWeight: 58,
+      gpsSource: { lat: 12.971, lng: 77.62 },
+    },
+    transit: {
+      truckId: "KA-02-TR-8888",
+      routeId: "ROUTE-KA-02-TR-8888",
+      liveGps: { lat: 12.971, lng: 77.62 },
+      lastStopMinutes: 0,
+      locationType: "Collection Zone",
+      unauthorizedStop: false,
+      routeDeviation: false,
+    },
+    destinationStamp: null,
+    citizenConfirmation: {
+      status: "pending",
+      updatedAt: null,
+    },
+    chain: [
+      {
+        label: "Source Scan",
+        actor: "Collector Arun",
+        time: new Date().toLocaleString(),
+        hash: "demo-source-scan",
+      },
+    ],
+    anomalyIssues: [
+      {
+        type: "Citizen Confirmation Pending",
+        severity: "medium",
+        note: "Citizen has not yet confirmed that collection happened.",
+      },
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "EVT-DEMO-002",
+    binId: "BIN-102",
+    area: "Ward 8",
+    wasteType: "Dry Waste",
+    truck: "KA-01-EF-1234",
+    collector: "Collector Meena",
+    status: "Processed",
+    pickupWeight: 42,
+    plantWeight: 41,
+    risk: "Low",
+    source: "Ward 8",
+    ai: {
+      category: "Dry Waste",
+      recommendation: "Send for sorting and recycling",
+    },
+    sourceStamp: {
+      binId: "BIN-102",
+      timestamp: new Date().toISOString(),
+      estimatedWeight: 42,
+      gpsSource: { lat: 12.948, lng: 77.606 },
+    },
+    transit: {
+      truckId: "KA-01-EF-1234",
+      routeId: "ROUTE-KA-01-EF-1234",
+      liveGps: { lat: 12.93, lng: 77.6 },
+      lastStopMinutes: 0,
+      locationType: "Plant Zone",
+      unauthorizedStop: false,
+      routeDeviation: false,
+    },
+    destinationStamp: {
+      finalWeight: 41,
+      verificationId: "VR-DEMO-001",
+      processingType: "Mixed Sorting",
+    },
+    citizenConfirmation: {
+      status: "confirmed",
+      updatedAt: new Date().toISOString(),
+    },
+    chain: [
+      {
+        label: "Source Scan",
+        actor: "Collector Meena",
+        time: new Date().toLocaleString(),
+        hash: "demo-scan-102",
+      },
+      {
+        label: "Plant Verification",
+        actor: "Plant Operator",
+        time: new Date().toLocaleString(),
+        hash: "demo-plant-102",
+      },
+    ],
+    anomalyIssues: [],
+    createdAt: new Date().toISOString(),
+  },
+];
+
+const DEFAULT_COMPLAINTS = [
+  {
+    id: "CMP-DEMO-001",
+    binId: "BIN-101",
+    area: "Ward 12",
+    wasteType: "Mixed Waste",
+    complaintText: "Waste was not cleared properly near the market area.",
+    status: "Open",
+    createdAt: new Date().toISOString(),
+    createdLabel: new Date().toLocaleString(),
+    resolvedAt: null,
+    resolvedLabel: null,
+    resolvedBy: null,
+    linkedEventType: null,
+    linkedEventId: null,
+    operationalUpdates: [],
+  },
+  {
+    id: "CMP-DEMO-002",
+    binId: "BIN-102",
+    area: "Ward 8",
+    wasteType: "Dry Waste",
+    complaintText: "Bin overflow issue was reported in the morning.",
+    status: "Resolved - Operational",
+    createdAt: new Date().toISOString(),
+    createdLabel: new Date().toLocaleString(),
+    resolvedAt: new Date().toISOString(),
+    resolvedLabel: new Date().toLocaleString(),
+    resolvedBy: "System (Operational Flow)",
+    linkedEventType: "plant",
+    linkedEventId: "EVT-DEMO-002",
+    operationalUpdates: [
+      {
+        type: "plant",
+        time: new Date().toLocaleString(),
+        note: "Complaint linked to plant verification.",
+      },
+    ],
+  },
+];
+
+/* --------------------------------
+   BASIC STORAGE HELPERS
+-------------------------------- */
 function readJson(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -33,23 +192,65 @@ function writeComplaints(complaints) {
   writeJson(COMPLAINT_STORAGE_KEY, complaints);
 }
 
-function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
+/* --------------------------------
+   DEMO DATA INITIALIZATION / RESET
+-------------------------------- */
+export function initializeDemoData() {
+  const events = readEvents();
+  const complaints = readComplaints();
+
+  if (!events.length) {
+    writeEvents(DEFAULT_EVENTS);
+  }
+
+  if (!complaints.length) {
+    writeComplaints(DEFAULT_COMPLAINTS);
+  }
 }
 
-function isInsideAuthorizedZone(lat, lng) {
-  return authorizedZones.some((zone) => {
-    const dist = haversineKm(lat, lng, zone.lat, zone.lng);
-    return dist <= zone.radiusKm;
-  });
+export function resetDemoData() {
+  localStorage.removeItem(EVENT_STORAGE_KEY);
+  localStorage.removeItem(COMPLAINT_STORAGE_KEY);
+
+  writeEvents(DEFAULT_EVENTS);
+  writeComplaints(DEFAULT_COMPLAINTS);
+
+  return {
+    events: readEvents(),
+    complaints: readComplaints(),
+  };
+}
+
+/* --------------------------------
+   CHAIN / ANALYSIS HELPERS
+-------------------------------- */
+async function appendChain(event, label, actor, metadata = {}) {
+  const previousHash =
+    event.chain?.length > 0 ? event.chain[event.chain.length - 1].hash : "GENESIS";
+
+  const stepData = {
+    binId: event.binId,
+    label,
+    actor,
+    time: new Date().toISOString(),
+    ...metadata,
+  };
+
+  const hash = await buildStepHash(stepData, previousHash);
+
+  return [
+    ...(event.chain || []),
+    {
+      label,
+      actor,
+      time: new Date().toLocaleString(),
+      hash: hash.slice(0, 16),
+    },
+  ];
+}
+
+function evaluateUnauthorizedStop(stopMinutes, locationType) {
+  return Number(stopMinutes) > 10 && locationType === "Unlisted Area";
 }
 
 function analyzeEvent(event) {
@@ -69,11 +270,19 @@ function analyzeEvent(event) {
     }
   }
 
-  if (event.transit?.lastStopMinutes > 10 && event.transit?.unauthorizedStop) {
+  if (event.transit?.routeDeviation) {
+    issues.push({
+      type: "Route Deviation",
+      severity: "high",
+      note: "Truck moved outside the authorized route corridor.",
+    });
+  }
+
+  if (event.transit?.unauthorizedStop) {
     issues.push({
       type: "Unauthorized Stop",
       severity: "high",
-      note: `Truck stopped ${event.transit.lastStopMinutes} minutes outside authorized zones.`,
+      note: `Truck stopped ${event.transit.lastStopMinutes} minutes in an unlisted area.`,
     });
   }
 
@@ -81,7 +290,7 @@ function analyzeEvent(event) {
     issues.push({
       type: "Citizen Reported Anomaly",
       severity: "high",
-      note: "Citizen explicitly reported collection anomaly.",
+      note: "Citizen reported that collection did not happen correctly.",
     });
   }
 
@@ -89,97 +298,15 @@ function analyzeEvent(event) {
     issues.push({
       type: "Citizen Confirmation Pending",
       severity: "medium",
-      note: "Citizen has not yet confirmed pickup.",
+      note: "Citizen has not yet confirmed that collection happened.",
     });
   }
 
   let risk = "Low";
   if (issues.some((i) => i.severity === "high")) risk = "High";
-  else if (issues.length) risk = "Medium";
+  else if (issues.length > 0) risk = "Medium";
 
   return { issues, risk };
-}
-
-async function appendChain(event, label, actor, metadata = {}) {
-  const prevHash =
-    event.chain?.length > 0 ? event.chain[event.chain.length - 1].hash : "GENESIS";
-
-  const stepData = {
-    binId: event.binId,
-    label,
-    actor,
-    time: new Date().toISOString(),
-    ...metadata,
-  };
-
-  const hash = await buildStepHash(stepData, prevHash);
-
-  return [
-    ...(event.chain || []),
-    {
-      label,
-      actor,
-      time: new Date().toLocaleString(),
-      hash: hash.slice(0, 16),
-    },
-  ];
-}
-
-export function getAllEvents() {
-  return readEvents();
-}
-
-export function getLatestEventByBinId(binId) {
-  const events = readEvents().filter((e) => e.binId === binId);
-  return events.length ? events[events.length - 1] : null;
-}
-
-export function getAllComplaints() {
-  return readComplaints();
-}
-
-export async function saveComplaint({ bin, complaintText }) {
-  const complaints = readComplaints();
-  const now = new Date();
-
-  const complaint = {
-    id: `CMP-${Date.now()}`,
-    binId: bin.id,
-    area: bin.area,
-    wasteType: bin.wasteType,
-    complaintText,
-    status: "Open",
-    createdAt: now.toISOString(),
-    createdLabel: now.toLocaleString(),
-    resolvedAt: null,
-    resolvedLabel: null,
-    resolvedBy: null,
-    linkedEventType: null,
-    linkedEventId: null,
-    operationalUpdates: [],
-  };
-
-  complaints.unshift(complaint);
-  writeComplaints(complaints);
-  return complaint;
-}
-
-export function resolveComplaint(complaintId, resolvedBy = "Admin Officer") {
-  const complaints = readComplaints();
-  const idx = complaints.findIndex((c) => c.id === complaintId);
-  if (idx === -1) return null;
-
-  const now = new Date();
-  complaints[idx] = {
-    ...complaints[idx],
-    status: "Resolved - Manual",
-    resolvedAt: now.toISOString(),
-    resolvedLabel: now.toLocaleString(),
-    resolvedBy,
-  };
-
-  writeComplaints(complaints);
-  return complaints[idx];
 }
 
 function updateComplaintOperationalStatus(binId, eventType, eventId, finalStatus) {
@@ -191,6 +318,7 @@ function updateComplaintOperationalStatus(binId, eventType, eventId, finalStatus
     if (c.status === "Resolved - Manual") return c;
 
     changed = true;
+
     const operationalUpdates = [...(c.operationalUpdates || [])];
     operationalUpdates.push({
       type: eventType,
@@ -198,7 +326,11 @@ function updateComplaintOperationalStatus(binId, eventType, eventId, finalStatus
       note:
         eventType === "pickup"
           ? "Complaint linked to collector pickup."
-          : "Complaint linked to plant verification.",
+          : eventType === "plant"
+          ? "Complaint linked to plant verification."
+          : eventType === "transit"
+          ? "Complaint linked to transit anomaly monitoring."
+          : "Complaint linked to operational flow.",
     });
 
     return {
@@ -216,171 +348,28 @@ function updateComplaintOperationalStatus(binId, eventType, eventId, finalStatus
   if (changed) writeComplaints(updated);
 }
 
-export async function savePickupEvent({
-  bin,
-  truck,
-  collector = "Collector",
-  estimatedWeight = 50,
-}) {
-  const events = readEvents();
-  const now = new Date();
-
-  const baseEvent = {
-    id: `EVT-${Date.now()}`,
-    binId: bin.id,
-    area: bin.area,
-    wasteType: bin.wasteType,
-    truck: truck || bin.assignedTruck,
-    collector,
-    status: "Collected",
-    pickupWeight: Number(estimatedWeight),
-    plantWeight: null,
-    risk: "Low",
-    source: bin.area,
-    ai: {
-      category: bin.wasteType,
-      recommendation: "Segregate at source",
-    },
-    sourceStamp: {
-      binId: bin.id,
-      timestamp: now.toISOString(),
-      estimatedWeight: Number(estimatedWeight),
-      gpsSource: { lat: bin.lat, lng: bin.lng },
-    },
-    transit: {
-      routeId: `ROUTE-${bin.assignedTruck}`,
-      lastStopMinutes: 0,
-      unauthorizedStop: false,
-      liveGps: { lat: bin.lat, lng: bin.lng },
-    },
-    citizenConfirmation: {
-      status: "pending",
-      updatedAt: null,
-    },
-    chain: [],
-    anomalyIssues: [],
-    createdAt: now.toISOString(),
-  };
-
-  const chain = await appendChain(baseEvent, "Source Scan", collector, baseEvent.sourceStamp);
-
-  const event = {
-    ...baseEvent,
-    chain,
-  };
-
-  const analysis = analyzeEvent(event);
-  event.risk = analysis.risk;
-  event.anomalyIssues = analysis.issues;
-
-  events.push(event);
-  writeEvents(events);
-
-  updateComplaintOperationalStatus(bin.id, "pickup", event.id, false);
-
-  return event;
+/* --------------------------------
+   PUBLIC GETTERS
+-------------------------------- */
+export function getAllEvents() {
+  initializeDemoData();
+  return readEvents();
 }
 
-export async function updateCitizenConfirmation(binId, status) {
-  const events = readEvents();
-  const idx = events.findIndex((e) => e.binId === binId);
-  if (idx === -1) return null;
-
-  const event = events[idx];
-  const updated = {
-    ...event,
-    citizenConfirmation: {
-      status,
-      updatedAt: new Date().toISOString(),
-    },
-  };
-
-  updated.chain = await appendChain(
-    updated,
-    status === "confirmed" ? "Citizen Confirmation" : "Citizen Reported Anomaly",
-    "Citizen",
-    { status }
-  );
-
-  const analysis = analyzeEvent(updated);
-  updated.risk = analysis.risk;
-  updated.anomalyIssues = analysis.issues;
-
-  events[idx] = updated;
-  writeEvents(events);
-
-  return updated;
+export function getLatestEventByBinId(binId) {
+  initializeDemoData();
+  const events = readEvents().filter((e) => e.binId === binId);
+  return events.length ? events[events.length - 1] : null;
 }
 
-export async function updateTransitStatus(binId, lat, lng, stopMinutes = 0) {
-  const events = readEvents();
-  const idx = events.findIndex((e) => e.binId === binId);
-  if (idx === -1) return null;
-
-  const event = events[idx];
-  const unauthorizedStop = stopMinutes > 10 && !isInsideAuthorizedZone(lat, lng);
-
-  const updated = {
-    ...event,
-    transit: {
-      ...event.transit,
-      liveGps: { lat, lng },
-      lastStopMinutes: stopMinutes,
-      unauthorizedStop,
-    },
-  };
-
-  updated.chain = await appendChain(updated, "Transit Update", "Truck System", {
-    lat,
-    lng,
-    stopMinutes,
-    unauthorizedStop,
-  });
-
-  const analysis = analyzeEvent(updated);
-  updated.risk = analysis.risk;
-  updated.anomalyIssues = analysis.issues;
-
-  events[idx] = updated;
-  writeEvents(events);
-  return updated;
-}
-
-export async function verifyPlantEntry(binId, plantWeight, processingType = "Mixed Sorting") {
-  const events = readEvents();
-  const idx = events.findIndex((e) => e.binId === binId);
-  if (idx === -1) return null;
-
-  const event = events[idx];
-  const updated = {
-    ...event,
-    plantWeight: Number(plantWeight),
-    status: "Processed",
-    destinationStamp: {
-      finalWeight: Number(plantWeight),
-      verificationId: `VR-${Date.now()}`,
-      processingType,
-    },
-  };
-
-  updated.chain = await appendChain(updated, "Plant Verification", "Plant Operator", {
-    finalWeight: Number(plantWeight),
-    processingType,
-  });
-
-  const analysis = analyzeEvent(updated);
-  updated.risk = analysis.risk;
-  updated.anomalyIssues = analysis.issues;
-
-  events[idx] = updated;
-  writeEvents(events);
-
-  updateComplaintOperationalStatus(binId, "plant", updated.id, true);
-
-  return updated;
+export function getAllComplaints() {
+  initializeDemoData();
+  return readComplaints();
 }
 
 export function getAllAlerts() {
+  initializeDemoData();
+
   const events = readEvents();
   const complaints = readComplaints();
   const alerts = [];
@@ -426,4 +415,261 @@ export function getAllAlerts() {
   });
 
   return alerts;
+}
+
+/* --------------------------------
+   EVENT ACTIONS
+-------------------------------- */
+export async function savePickupEvent({
+  bin,
+  truck,
+  collector = "Collector",
+  estimatedWeight = 50,
+}) {
+  initializeDemoData();
+
+  const events = readEvents();
+  const now = new Date();
+
+  const baseEvent = {
+    id: `EVT-${Date.now()}`,
+    binId: bin.id,
+    area: bin.area,
+    wasteType: bin.wasteType,
+    truck: truck || bin.assignedTruck,
+    collector,
+    status: "Collected",
+    pickupWeight: Number(estimatedWeight),
+    plantWeight: null,
+    risk: "Low",
+    source: bin.area,
+    ai: {
+      category: bin.wasteType,
+      recommendation: "Segregate at source",
+    },
+    sourceStamp: {
+      binId: bin.id,
+      timestamp: now.toISOString(),
+      estimatedWeight: Number(estimatedWeight),
+      gpsSource: { lat: bin.lat ?? 12.971, lng: bin.lng ?? 77.62 },
+    },
+    transit: {
+      truckId: truck || bin.assignedTruck,
+      routeId: `ROUTE-${truck || bin.assignedTruck}`,
+      liveGps: { lat: bin.lat ?? 12.971, lng: bin.lng ?? 77.62 },
+      lastStopMinutes: 0,
+      locationType: "Collection Zone",
+      unauthorizedStop: false,
+      routeDeviation: false,
+    },
+    destinationStamp: null,
+    citizenConfirmation: {
+      status: "pending",
+      updatedAt: null,
+    },
+    chain: [],
+    anomalyIssues: [],
+    createdAt: now.toISOString(),
+  };
+
+  const chain = await appendChain(baseEvent, "Source Scan", collector, {
+    sourceStamp: baseEvent.sourceStamp,
+  });
+
+  const event = {
+    ...baseEvent,
+    chain,
+  };
+
+  const analysis = analyzeEvent(event);
+  event.risk = analysis.risk;
+  event.anomalyIssues = analysis.issues;
+
+  events.push(event);
+  writeEvents(events);
+
+  updateComplaintOperationalStatus(bin.id, "pickup", event.id, false);
+
+  return event;
+}
+
+export async function updateCitizenConfirmation(binId, status) {
+  initializeDemoData();
+
+  const events = readEvents();
+  const idx = events.findIndex((e) => e.binId === binId);
+  if (idx === -1) return null;
+
+  const event = events[idx];
+
+  const updated = {
+    ...event,
+    citizenConfirmation: {
+      status,
+      updatedAt: new Date().toISOString(),
+    },
+  };
+
+  updated.chain = await appendChain(
+    updated,
+    status === "confirmed" ? "Citizen Confirmation" : "Citizen Reported Anomaly",
+    "Citizen",
+    { status }
+  );
+
+  const analysis = analyzeEvent(updated);
+  updated.risk = analysis.risk;
+  updated.anomalyIssues = analysis.issues;
+
+  events[idx] = updated;
+  writeEvents(events);
+
+  return updated;
+}
+
+export async function updateTransitSimulation(
+  binId,
+  {
+    lat,
+    lng,
+    stopMinutes = 0,
+    locationType = "Authorized Route",
+    routeDeviation = false,
+  }
+) {
+  initializeDemoData();
+
+  const events = readEvents();
+  const idx = events.findIndex((e) => e.binId === binId);
+  if (idx === -1) return null;
+
+  const event = events[idx];
+  const unauthorizedStop = evaluateUnauthorizedStop(stopMinutes, locationType);
+
+  const updated = {
+    ...event,
+    transit: {
+      ...event.transit,
+      liveGps: { lat, lng },
+      lastStopMinutes: Number(stopMinutes),
+      locationType,
+      unauthorizedStop,
+      routeDeviation,
+    },
+  };
+
+  updated.chain = await appendChain(updated, "Transit Update", "Truck System", {
+    lat,
+    lng,
+    stopMinutes,
+    locationType,
+    unauthorizedStop,
+    routeDeviation,
+  });
+
+  const analysis = analyzeEvent(updated);
+  updated.risk = analysis.risk;
+  updated.anomalyIssues = analysis.issues;
+
+  events[idx] = updated;
+  writeEvents(events);
+
+  if (routeDeviation || unauthorizedStop) {
+    updateComplaintOperationalStatus(binId, "transit", updated.id, false);
+  }
+
+  return updated;
+}
+
+export async function verifyPlantEntry(
+  binId,
+  plantWeight,
+  processingType = "Mixed Sorting"
+) {
+  initializeDemoData();
+
+  const events = readEvents();
+  const idx = events.findIndex((e) => e.binId === binId);
+  if (idx === -1) return null;
+
+  const event = events[idx];
+
+  const updated = {
+    ...event,
+    plantWeight: Number(plantWeight),
+    status: "Processed",
+    destinationStamp: {
+      finalWeight: Number(plantWeight),
+      verificationId: `VR-${Date.now()}`,
+      processingType,
+    },
+  };
+
+  updated.chain = await appendChain(updated, "Plant Verification", "Plant Operator", {
+    finalWeight: Number(plantWeight),
+    processingType,
+  });
+
+  const analysis = analyzeEvent(updated);
+  updated.risk = analysis.risk;
+  updated.anomalyIssues = analysis.issues;
+
+  events[idx] = updated;
+  writeEvents(events);
+
+  updateComplaintOperationalStatus(binId, "plant", updated.id, true);
+
+  return updated;
+}
+
+/* --------------------------------
+   COMPLAINT ACTIONS
+-------------------------------- */
+export async function saveComplaint({ bin, complaintText }) {
+  initializeDemoData();
+
+  const complaints = readComplaints();
+  const now = new Date();
+
+  const complaint = {
+    id: `CMP-${Date.now()}`,
+    binId: bin.id,
+    area: bin.area,
+    wasteType: bin.wasteType,
+    complaintText,
+    status: "Open",
+    createdAt: now.toISOString(),
+    createdLabel: now.toLocaleString(),
+    resolvedAt: null,
+    resolvedLabel: null,
+    resolvedBy: null,
+    linkedEventType: null,
+    linkedEventId: null,
+    operationalUpdates: [],
+  };
+
+  complaints.unshift(complaint);
+  writeComplaints(complaints);
+  return complaint;
+}
+
+export function resolveComplaint(complaintId, resolvedBy = "Admin Officer") {
+  initializeDemoData();
+
+  const complaints = readComplaints();
+  const idx = complaints.findIndex((c) => c.id === complaintId);
+  if (idx === -1) return null;
+
+  const now = new Date();
+
+  complaints[idx] = {
+    ...complaints[idx],
+    status: "Resolved - Manual",
+    resolvedAt: now.toISOString(),
+    resolvedLabel: now.toLocaleString(),
+    resolvedBy,
+  };
+
+  writeComplaints(complaints);
+  return complaints[idx];
 }
