@@ -1,4 +1,13 @@
-import { MapPinned, QrCode, AlarmClock, Route, X } from "lucide-react";
+import {
+  MapPinned,
+  QrCode,
+  AlarmClock,
+  Route,
+  X,
+  Upload,
+  CheckCircle2,
+  Search,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
@@ -15,6 +24,12 @@ export default function CollectorDashboard() {
   const [binData, setBinData] = useState(null);
   const [pickupConfirmed, setPickupConfirmed] = useState(false);
 
+  const [cameraStatus, setCameraStatus] = useState("idle");
+  const [uploadError, setUploadError] = useState("");
+  const [isDecodingFile, setIsDecodingFile] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [manualBinId, setManualBinId] = useState("");
+
   const html5QrCodeRef = useRef(null);
 
   useEffect(() => {
@@ -24,6 +39,9 @@ export default function CollectorDashboard() {
 
     const startScanner = async () => {
       try {
+        setCameraStatus("starting");
+        setUploadError("");
+
         const html5QrCode = new Html5Qrcode(scannerId);
         html5QrCodeRef.current = html5QrCode;
 
@@ -31,15 +49,17 @@ export default function CollectorDashboard() {
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 220, height: 220 } },
           async (decodedText) => {
-            handleScan(decodedText);
+            processDecodedText(decodedText);
             await stopScanner();
             setScannerOpen(false);
           },
           () => {}
         );
+
+        setCameraStatus("running");
       } catch (error) {
         console.error("QR scanner error:", error);
-        alert("Unable to access camera or start QR scanner.");
+        setCameraStatus("failed");
       }
     };
 
@@ -62,6 +82,8 @@ export default function CollectorDashboard() {
       }
     } catch (error) {
       console.error("Error stopping scanner:", error);
+    } finally {
+      setCameraStatus("idle");
     }
   };
 
@@ -94,10 +116,10 @@ export default function CollectorDashboard() {
     const match = raw.match(/BIN-\d+/i);
     if (match) return match[0].toUpperCase();
 
-    return raw;
+    return raw.toUpperCase();
   };
 
-  const handleScan = (decodedText) => {
+  const processDecodedText = (decodedText) => {
     setScanResult(decodedText);
 
     const normalizedId = extractBinId(decodedText);
@@ -109,12 +131,18 @@ export default function CollectorDashboard() {
 
     setBinData(foundBin || null);
     setPickupConfirmed(false);
+    setUploadError("");
+  };
+
+  const handleScan = (decodedText) => {
+    processDecodedText(decodedText);
   };
 
   const handleConfirmPickup = () => {
     if (!binData) return;
 
     const chosenTruck = trucks.find((t) => t.plate === binData.assignedTruck);
+
     savePickupEvent({
       bin: binData,
       truck: chosenTruck?.plate || binData.assignedTruck,
@@ -126,6 +154,40 @@ export default function CollectorDashboard() {
     setTimeout(() => {
       navigate(`/passport/${binData.id}`);
     }, 800);
+  };
+
+  const handleQrFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadError("");
+    setUploadedFileName(file.name);
+    setIsDecodingFile(true);
+
+    try {
+      const tempScanner = new Html5Qrcode("collector-file-reader-temp");
+      const decodedText = await tempScanner.scanFile(file, true);
+      await tempScanner.clear();
+
+      await stopScanner();
+      setScannerOpen(false);
+
+      handleScan(decodedText);
+    } catch (error) {
+      console.error("QR file decode failed:", error);
+      setUploadError("Could not detect a QR code from this image. Try a clearer QR image.");
+    } finally {
+      setIsDecodingFile(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleManualBinSelect = async () => {
+    if (!manualBinId) return;
+
+    await stopScanner();
+    setScannerOpen(false);
+    handleScan(manualBinId);
   };
 
   return (
@@ -148,7 +210,12 @@ export default function CollectorDashboard() {
             </div>
 
             <button
-              onClick={() => setScannerOpen(true)}
+              onClick={() => {
+                setScannerOpen(true);
+                setUploadError("");
+                setUploadedFileName("");
+                setManualBinId("");
+              }}
               className="inline-flex items-center gap-2 rounded-xl bg-[#16a34a] px-5 py-3 font-semibold text-white shadow-sm hover:bg-[#15803d]"
             >
               <QrCode size={18} />
@@ -182,7 +249,7 @@ export default function CollectorDashboard() {
                 Bin not found
               </p>
               <p className="mt-2 text-sm text-slate-700">
-                Use QR values like <b>BIN-1001</b>.
+                Use QR values like <b>BIN-1001</b>, upload a valid QR image, or choose a bin manually.
               </p>
             </div>
           )}
@@ -247,7 +314,8 @@ export default function CollectorDashboard() {
                 </button>
 
                 {pickupConfirmed && (
-                  <span className="rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
+                    <CheckCircle2 size={16} />
                     Pickup saved and passport updated
                   </span>
                 )}
@@ -305,7 +373,7 @@ export default function CollectorDashboard() {
                 1) QR Verification
               </p>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Scan bin QR code and automatically geo-tag the collection event.
+                Scan bin QR code, upload a QR image, or manually choose a bin to verify collection quickly.
               </p>
             </div>
 
@@ -324,8 +392,7 @@ export default function CollectorDashboard() {
                 <p className="text-sm font-semibold">3) Alert Monitoring</p>
               </div>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Trigger route alerts if the vehicle pauses too long or deviates
-                unexpectedly.
+                Trigger route alerts if the vehicle pauses too long or deviates unexpectedly.
               </p>
             </div>
           </div>
@@ -351,6 +418,9 @@ export default function CollectorDashboard() {
                 onClick={async () => {
                   await stopScanner();
                   setScannerOpen(false);
+                  setUploadError("");
+                  setUploadedFileName("");
+                  setManualBinId("");
                 }}
                 className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
               >
@@ -358,17 +428,122 @@ export default function CollectorDashboard() {
               </button>
             </div>
 
-            <div
-              id="collector-qr-reader"
-              className="overflow-hidden rounded-2xl border border-slate-200"
-            />
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 p-3">
+                <p className="mb-3 text-sm font-semibold text-slate-900">
+                  Live Camera Scan
+                </p>
 
-            <p className="mt-4 text-sm text-slate-500">
-              Allow camera permission and point the camera at the QR code.
-            </p>
+                <div
+                  id="collector-qr-reader"
+                  className="overflow-hidden rounded-2xl border border-slate-200"
+                />
+
+                <p className="mt-3 text-sm text-slate-500">
+                  {cameraStatus === "starting" &&
+                    "Starting camera scanner..."}
+                  {cameraStatus === "running" &&
+                    "Point the camera at the QR code."}
+                  {cameraStatus === "failed" &&
+                    "Camera access was slow or unavailable. Use upload or manual select below."}
+                  {cameraStatus === "idle" &&
+                    "Allow camera permission and point the camera at the QR code."}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Or
+                </span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+
+              <div className="rounded-2xl border border-dashed border-blue-300 bg-blue-50 p-4">
+                <div className="flex items-center gap-2 text-slate-900">
+                  <Upload size={16} className="text-[#1d4ed8]" />
+                  <p className="text-sm font-semibold">Upload QR Image</p>
+                </div>
+
+                <p className="mt-2 text-sm text-slate-600">
+                  Faster for demos. Upload a QR screenshot or QR image and decode it instantly.
+                </p>
+
+                <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#1d4ed8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af]">
+                  <Upload size={16} />
+                  Choose QR Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleQrFileUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {uploadedFileName && (
+                  <p className="mt-3 text-sm text-slate-700">
+                    Selected file: <b>{uploadedFileName}</b>
+                  </p>
+                )}
+
+                {isDecodingFile && (
+                  <p className="mt-3 text-sm font-medium text-blue-700">
+                    Decoding QR image...
+                  </p>
+                )}
+
+                {uploadError && (
+                  <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {uploadError}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-slate-900">
+                  <Search size={16} className="text-[#1d4ed8]" />
+                  <p className="text-sm font-semibold">Manual Bin Select</p>
+                </div>
+
+                <p className="mt-2 text-sm text-slate-600">
+                  Backup option for demo reliability.
+                </p>
+
+                <div className="mt-3 flex gap-3">
+                  <select
+                    value={manualBinId}
+                    onChange={(e) => setManualBinId(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none"
+                  >
+                    <option value="">Select bin</option>
+                    {bins.map((bin) => (
+                      <option key={bin.id} value={bin.id}>
+                        {bin.id} - {bin.area}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={handleManualBinSelect}
+                    disabled={!manualBinId}
+                    className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    Use
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-sm text-emerald-800">
+                  Demo tip: use <b>Upload QR Image</b> for instant scanning during presentation, and keep the camera option as the real-world workflow.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      <div id="collector-file-reader-temp" className="hidden" />
     </div>
   );
 }

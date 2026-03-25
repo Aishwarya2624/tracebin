@@ -1,28 +1,9 @@
 export const trucks = [
-  {
-    id: 1,
-    plate: "KA-01-TR-1234",
-    status: "active",
-    deviation: 0,
-    lat: 12.971,
-    lng: 77.620,
-  },
-  {
-    id: 2,
-    plate: "KA-02-TR-8888",
-    status: "alert",
-    deviation: 18,
-    lat: 12.959,
-    lng: 77.630,
-  },
-  {
-    id: 3,
-    plate: "KA-03-TR-4567",
-    status: "active",
-    deviation: 3,
-    lat: 12.945,
-    lng: 77.615,
-  },
+  { id: 1, plate: "KA-01-TR-1234", status: "active", deviation: 0, lat: 12.971, lng: 77.620 },
+  { id: 2, plate: "KA-02-TR-8888", status: "alert", deviation: 18, lat: 12.959, lng: 77.630 },
+  { id: 3, plate: "KA-03-TR-4567", status: "active", deviation: 3, lat: 12.945, lng: 77.615 },
+  { id: 4, plate: "KA-04-TR-9999", status: "active", deviation: 2, lat: 12.960, lng: 77.600 },
+  { id: 5, plate: "KA-05-TR-7777", status: "alert", deviation: 25, lat: 12.940, lng: 77.640 },
 ];
 
 export const bins = [
@@ -56,6 +37,76 @@ export const bins = [
     lng: 77.615,
     citizenName: "Resident - Ward 3",
   },
+  {
+    id: "BIN-1004",
+    area: "Ward 4",
+    wasteType: "Dry Waste",
+    lastPickup: "Today 10:15 AM",
+    assignedTruck: "KA-04-TR-9999",
+    lat: 12.960,
+    lng: 77.600,
+    citizenName: "Resident - Ward 4",
+  },
+  {
+    id: "BIN-1005",
+    area: "Ward 5",
+    wasteType: "Mixed Waste",
+    lastPickup: "Today 7:50 AM",
+    assignedTruck: "KA-05-TR-7777",
+    lat: 12.940,
+    lng: 77.640,
+    citizenName: "Resident - Ward 5",
+  },
+  {
+    id: "BIN-1006",
+    area: "Ward 6",
+    wasteType: "Wet Waste",
+    lastPickup: "Today 8:00 AM",
+    assignedTruck: "KA-01-TR-1234",
+    lat: 12.975,
+    lng: 77.625,
+    citizenName: "Resident - Ward 6",
+  },
+  {
+    id: "BIN-1007",
+    area: "Ward 7",
+    wasteType: "Dry Waste",
+    lastPickup: "Yesterday 5:30 PM",
+    assignedTruck: "KA-02-TR-8888",
+    lat: 12.955,
+    lng: 77.635,
+    citizenName: "Resident - Ward 7",
+  },
+  {
+    id: "BIN-1008",
+    area: "Ward 8",
+    wasteType: "Mixed Waste",
+    lastPickup: "Today 9:45 AM",
+    assignedTruck: "KA-03-TR-4567",
+    lat: 12.948,
+    lng: 77.610,
+    citizenName: "Resident - Ward 8",
+  },
+  {
+    id: "BIN-1009",
+    area: "Ward 9",
+    wasteType: "Wet Waste",
+    lastPickup: "Today 6:50 AM",
+    assignedTruck: "KA-04-TR-9999",
+    lat: 12.965,
+    lng: 77.605,
+    citizenName: "Resident - Ward 9",
+  },
+  {
+    id: "BIN-1010",
+    area: "Ward 10",
+    wasteType: "Dry Waste",
+    lastPickup: "Yesterday 8:20 PM",
+    assignedTruck: "KA-05-TR-7777",
+    lat: 12.938,
+    lng: 77.645,
+    citizenName: "Resident - Ward 10",
+  },
 ];
 
 export const authorizedZones = [
@@ -81,4 +132,19 @@ export const passport = {
   chain: [],
 };
 
-export const alerts = [];
+export const alerts = [
+  {
+    id: 1,
+    type: "Route Deviation",
+    truck: "KA-02-TR-8888",
+    severity: "High",
+    message: "Truck deviated from authorized route",
+  },
+  {
+    id: 2,
+    type: "Weight Mismatch",
+    truck: "KA-05-TR-7777",
+    severity: "Medium",
+    message: "Pickup and plant weight mismatch",
+  },
+];
