@@ -1,99 +1,144 @@
-# TraceBin: Waste Accountability & Tracking System
+# 🚮 TraceBin
 
-TraceBin is a smart waste accountability platform designed to track waste from the point of collection to the processing plant. It improves transparency, reduces leakage, and creates a traceable digital record for each waste collection event using QR-based identification, role-based dashboards, and audit-friendly workflows.
+### Smart Waste Traceability for Transparent Cities
 
-## Problem Statement
+> Transforming waste management into a **transparent, accountable, and intelligent system**.
 
-Traditional waste collection systems often face:
-- Lack of end-to-end traceability
-- No clear accountability between collection and disposal
-- Difficulty detecting route deviation or possible leakage
-- Limited transparency for authorities and citizens
-- Manual record keeping and weak audit trails
+---
 
-## Solution
+## 📌 Overview
 
-TraceBin provides a unified system where:
-- Each bin is linked to a QR-based identity
-- Collectors scan bins before pickup
-- Trucks and collection activity are monitored
-- Plant operators verify incoming waste
-- A Waste Passport records the collection journey
-- Authorities can monitor anomalies and operational status
+TraceBin is a smart waste accountability platform that tracks waste from **bin to processing plant** using real-time monitoring, anomaly detection, and tamper-proof records.
 
-## Core Features
+It eliminates the “black box” in waste management by ensuring **complete visibility and verification at every stage**.
 
-- QR-based bin identification
-- Collector dashboard for route and pickup operations
-- Citizen-facing module for transparency and reporting
-- Plant dashboard for verification and intake monitoring
-- Waste Passport for chain-of-custody visibility
-- Role-based access for different stakeholders
-- Government-style portal UI for official presentation
+---
 
-## Workflow
+## ❗ Problem Statement
 
-### 1. Bin Identification
-Each waste bin is assigned a unique QR code.
+* No tracking once waste leaves households
+* High risk of illegal dumping & fraud
+* No real-time monitoring of collection vehicles
+* Lack of accountability & audit trails
+* Environmental and public health risks
 
-Example QR value:
-BIN-1001
+---
 
-### 2. Collector Scan
-The collector scans the bin QR code using the Collector Dashboard.
+## 💡 Solution
 
-The system:
-- reads the QR value
-- identifies the bin
-- fetches matching bin data
-- shows bin details on screen
+TraceBin introduces a **Waste Passport System** that:
 
-### 3. Pickup Confirmation
-After scan validation, the collector confirms pickup.
+* Tracks waste lifecycle (Bin → Pickup → Transit → Processing)
+* Monitors vehicles in real-time
+* Detects anomalies like route deviation & weight mismatch
+* Stores tamper-proof audit logs
+* Provides a centralized dashboard for authorities
 
-This can later be extended with:
-- geo-tagging
-- image proof upload
-- estimated weight entry
+---
 
-### 4. Truck Monitoring
-Truck details such as:
-- plate number
-- deviation percentage
-- route alerts
-- location data
+## 🎥 Demo Video
 
-are shown in the Collector module.
 
-### 5. Plant Verification
-The Plant Dashboard allows verification of incoming waste batches and supports processing confirmation.
 
-### 6. Waste Passport
-Each collection event can be represented through a Waste Passport that contains:
-- source
-- truck
-- collector
-- waste type
-- timestamps
-- chain-of-custody history
+https://github.com/user-attachments/assets/46e4ce7c-c062-4b29-9807-48bf65f00359
 
-## Tech Stack
 
-### Frontend
-- React
-- Vite
-- Tailwind CSS
-- Framer Motion
-- Lucide React
 
-### QR Scanning
-- html5-qrcode
+---
 
-### Backend (planned / extendable)
-- FastAPI or Node.js
-- MongoDB
+## 🏗️ System Architecture
+
+* Input Layer (Citizen, Collector, Plant)
+* Waste Passport Engine
+* Transit Monitoring (GPS Tracking)
+* Anomaly Detection Engine
+* Immutable Ledger
+* Admin Dashboard
+
 
 ## system architecture
 <p align="center">
-  <img src="system%20architecture.png" width="600" alt="EcoTrace System Architecture">
+  <img src="frontend/assets/complete-architecture.png" width="600" alt="EcoTrace System Architecture">
 </p>
+
+---
+
+## 🔑 Key Features
+
+* 📍 Real-time GPS tracking
+* 🚨 Fraud & anomaly detection
+* 🔐 Tamper-proof audit system
+* 📊 Centralized monitoring dashboard
+* 👥 Citizen participation (QR-based tracking)
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+* React.js (Vite)
+* Tailwind CSS
+* Framer Motion
+
+### Backend
+
+* FastAPI (Python) / Node.js (Express)
+* REST APIs
+
+### Database
+
+* MongoDB
+
+### Maps & Tracking
+
+* React Leaflet (OpenStreetMap)
+
+### AI & Analytics
+
+* Rule-based anomaly detection
+  
+---
+
+## 🔄 How It Works
+
+1. Citizen scans QR / uploads waste data
+2. Collector verifies pickup with GPS & image
+3. System tracks truck movement in real-time
+4. Anomaly engine detects fraud or irregularities
+5. Plant verifies final waste processing
+6. All data stored in secure audit logs
+
+---
+
+## 📈 Impact & Benefits
+
+* 🌍 Reduced environmental pollution
+* 💰 Prevention of financial fraud
+* 🔍 Increased transparency & accountability
+* 🚨 Real-time governance & alerts
+* 👥 Improved citizen trust
+
+---
+
+## 🚀 Future Scope
+
+* Integration with smart IoT bins
+* AI-based waste classification
+* Blockchain-based audit system
+* Deployment in smart cities
+
+---
+
+## 🧠 Innovation Highlight
+
+> “We are not just managing waste — we are managing accountability.”
+
+---
+
+## 👨‍💻 Team
+
+* HackQueen
+
+---
+
